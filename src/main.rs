@@ -1,4 +1,4 @@
-use std::{env, fmt::Display, fs::File, num::NonZeroU32, process};
+use std::{env, fmt::Display, fs::File, io, num::NonZeroU32, process};
 
 #[derive(Debug)]
 pub enum ProcessingMode {
@@ -22,21 +22,28 @@ pub fn main() {
 
     let square_size = square_size
         .parse::<NonZeroU32>()
-        .unwrap_or_else(|_| fail("Square size must be a positive integer"));
+        .unwrap_or_else(|_| fail("Error: Square size must be a positive integer"));
 
     let mode = match mode.to_ascii_uppercase().as_str() {
         "S" => ProcessingMode::Single,
         "M" => ProcessingMode::Multi,
-        _ => {
-            fail("The processing mode must be either 'S' (single threaded) or 'M' (multi threaded)")
-        }
+        _ => fail(
+            "Error: The processing mode must be either 'S' (single threaded) or 'M' (multi threaded)",
+        ),
     };
 
-    let file = File::open(file_name).unwrap_or_else(|_| {
-        fail(format!(
-            "\"{file_name}\" does not exist or cannot be opened"
-        ))
-    });
+    let file = match File::open(file_name) {
+        Ok(f) => f,
+        Err(e) => match e.kind() {
+            io::ErrorKind::NotFound => fail(format!("Error: \"{file_name}\" not found")),
+            io::ErrorKind::PermissionDenied => fail(format!(
+                "Error: Permission denied for the file \"{file_name}\""
+            )),
+            _ => fail(format!(
+                "Error: Unknown error when trying to open \"{file_name}\""
+            )),
+        },
+    };
 
     println!("Args: {file:?}\n{square_size}\n{mode:?}");
 }
