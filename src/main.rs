@@ -11,7 +11,7 @@ pub fn main() {
     let Some([_, file_name, square_size, mode]) = args.as_array() else {
         eprintln!(
             "Usage: {} <filename> <square size> <processing mode>",
-            args.first().unwrap()
+            args.first().unwrap_or(&"program".to_string())
         );
         process::exit(1);
     };
@@ -21,7 +21,7 @@ pub fn main() {
         process::exit(1);
     };
 
-    let mode = match mode.to_uppercase().as_str() {
+    let mode = match mode.to_ascii_uppercase().as_str() {
         "S" => ProcessingMode::Single,
         "M" => ProcessingMode::Multi,
         _ => {
