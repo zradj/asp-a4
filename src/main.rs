@@ -1,7 +1,20 @@
-use std::{env, fmt::Display, fs::File, io, num::NonZeroU32, process};
+mod visualization;
+
+use std::{
+    env,
+    fmt::Display,
+    fs::File,
+    io::{self, BufReader},
+    num::NonZeroU32,
+    process,
+};
+
+use image::{GenericImageView, ImageFormat, ImageReader};
+
+use crate::visualization::visualize;
 
 #[derive(Debug)]
-pub enum ProcessingMode {
+enum ProcessingMode {
     Single,
     Multi,
 }
@@ -11,7 +24,7 @@ fn fail(msg: impl Display) -> ! {
     process::exit(1);
 }
 
-pub fn main() {
+fn main() {
     let args: Vec<String> = env::args().collect();
     let Some([_, file_name, square_size, mode]) = args.as_array() else {
         let name = args.first().map_or("program", String::as_str);
@@ -45,5 +58,19 @@ pub fn main() {
         },
     };
 
-    println!("Args: {file:?}\n{square_size}\n{mode:?}");
+    let img = ImageReader::new(BufReader::new(file))
+        .with_guessed_format()
+        .unwrap_or_else(|_| fail("Error: Error while reading the image"));
+    if !matches!(img.format(), Some(ImageFormat::Jpeg)) {
+        fail("Error: The provided image must be in the JPEG format");
+    }
+
+    let img = img.decode().unwrap();
+    let rgb = img.to_rgb8();
+    let pixels: Vec<u32> = rgb
+        .pixels()
+        .map(|p| (p[0] as u32) << 16 | (p[1] as u32) << 8 | p[2] as u32)
+        .collect();
+
+    visualize(rgb.width(), rgb.height(), pixels);
 }
