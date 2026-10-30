@@ -41,7 +41,7 @@ impl From<Args> for Settings {
         };
 
         let square_size = square_size
-            .parse::<NonZeroU32>()
+            .parse()
             .unwrap_or_else(|_| fail("Error: Square size must be a positive integer"));
 
         let mode = match mode.to_ascii_uppercase().as_str() {
