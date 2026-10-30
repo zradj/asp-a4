@@ -21,7 +21,8 @@ struct App {
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         let mut window_attrs = Window::default_attributes()
-            .with_inner_size(PhysicalSize::new(self.width, self.height));
+            .with_inner_size(PhysicalSize::new(self.width, self.height))
+            .with_decorations(false);
         window_attrs.resizable = false;
         let window = self
             .window
@@ -33,7 +34,9 @@ impl ApplicationHandler for App {
                 )
             })
             .clone();
-        self.surface = Some(Surface::new(&self.context, window).unwrap());
+        if self.surface.is_none() {
+            self.surface = Some(Surface::new(&self.context, window).unwrap());
+        }
     }
 
     fn window_event(
