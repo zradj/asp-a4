@@ -1,7 +1,7 @@
 mod visualization;
 
 use std::{
-    env,
+    env::{self, Args},
     fmt::Display,
     fs::File,
     io::{self, BufReader},
@@ -9,9 +9,14 @@ use std::{
     process,
 };
 
-use image::{GenericImageView, ImageFormat, ImageReader};
+use image::{ImageFormat, ImageReader};
 
 use crate::visualization::visualize;
+
+fn fail(msg: impl Display) -> ! {
+    eprintln!("{msg}");
+    process::exit(1);
+}
 
 #[derive(Debug)]
 enum ProcessingMode {
@@ -19,41 +24,56 @@ enum ProcessingMode {
     Multi,
 }
 
-fn fail(msg: impl Display) -> ! {
-    eprintln!("{msg}");
-    process::exit(1);
+struct Settings {
+    file_name: String,
+    square_size: NonZeroU32,
+    mode: ProcessingMode,
+}
+
+impl From<Args> for Settings {
+    fn from(args: Args) -> Self {
+        let args: Vec<String> = args.collect();
+        let Some([_, file_name, square_size, mode]) = args.as_array() else {
+            let name = args.first().map_or("program", String::as_str);
+            fail(format!(
+                "Usage: {name} <filename> <square size> <processing mode>",
+            ));
+        };
+
+        let square_size = square_size
+            .parse::<NonZeroU32>()
+            .unwrap_or_else(|_| fail("Error: Square size must be a positive integer"));
+
+        let mode = match mode.to_ascii_uppercase().as_str() {
+            "S" => ProcessingMode::Single,
+            "M" => ProcessingMode::Multi,
+            _ => fail(
+                "Error: The processing mode must be either 'S' (single threaded) or 'M' (multi threaded)",
+            ),
+        };
+
+        Self {
+            file_name: file_name.clone(),
+            square_size,
+            mode,
+        }
+    }
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let Some([_, file_name, square_size, mode]) = args.as_array() else {
-        let name = args.first().map_or("program", String::as_str);
-        fail(format!(
-            "Usage: {name} <filename> <square size> <processing mode>",
-        ));
-    };
+    let settings: Settings = env::args().into();
 
-    let square_size = square_size
-        .parse::<NonZeroU32>()
-        .unwrap_or_else(|_| fail("Error: Square size must be a positive integer"));
-
-    let mode = match mode.to_ascii_uppercase().as_str() {
-        "S" => ProcessingMode::Single,
-        "M" => ProcessingMode::Multi,
-        _ => fail(
-            "Error: The processing mode must be either 'S' (single threaded) or 'M' (multi threaded)",
-        ),
-    };
-
-    let file = match File::open(file_name) {
+    let file = match File::open(&settings.file_name) {
         Ok(f) => f,
         Err(e) => match e.kind() {
-            io::ErrorKind::NotFound => fail(format!("Error: \"{file_name}\" not found")),
+            io::ErrorKind::NotFound => fail(format!("Error: \"{}\" not found", settings.file_name)),
             io::ErrorKind::PermissionDenied => fail(format!(
-                "Error: Permission denied for the file \"{file_name}\""
+                "Error: Permission denied for the file \"{}\"",
+                settings.file_name
             )),
             _ => fail(format!(
-                "Error: Unknown error when trying to open \"{file_name}\""
+                "Error: Unknown error when trying to open \"{}\"",
+                settings.file_name
             )),
         },
     };
