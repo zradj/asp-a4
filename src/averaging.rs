@@ -18,6 +18,7 @@ pub(crate) fn worker(
     let max_done_y = (height as usize).div_ceil(square_size);
     let mut done_x = 0;
     let mut done_y = 0;
+    // work for 10 seconds regardless of the square size
     let sleep_duration =
         std::time::Duration::from_nanos(10000000000 / ((max_done_x as u64) * (max_done_y as u64)));
 
