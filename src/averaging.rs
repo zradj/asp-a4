@@ -18,12 +18,12 @@ pub(crate) fn worker(
     let max_done_y = (height as usize).div_ceil(square_size);
     let mut done_x = 0;
     let mut done_y = 0;
-    let num_pixels = (square_size as u64).pow(2);
     let sleep_duration =
         std::time::Duration::from_nanos(10000000000 / ((max_done_x as u64) * (max_done_y as u64)));
 
     while done_y < max_done_y {
         let (mut sum_r, mut sum_g, mut sum_b): (u64, u64, u64) = (0, 0, 0);
+        let mut px_cnt: u64 = 0;
 
         for px_row in pixels
             .chunks(width as usize)
@@ -36,11 +36,12 @@ pub(crate) fn worker(
                     sum_r += (px >> 16) & 0x0000FF;
                     sum_g += (px >> 8) & 0x0000FF;
                     sum_b += px & 0x0000FF;
+                    px_cnt += 1;
                 }
             }
         }
 
-        let (avg_r, avg_g, avg_b) = (sum_r / num_pixels, sum_g / num_pixels, sum_b / num_pixels);
+        let (avg_r, avg_g, avg_b) = (sum_r / px_cnt, sum_g / px_cnt, sum_b / px_cnt);
         let avg = (avg_r as u32) << 16 | (avg_g as u32) << 8 | (avg_b as u32);
 
         for px_row in pixels
@@ -50,7 +51,7 @@ pub(crate) fn worker(
         {
             for px_col in px_row.chunks(square_size).skip(done_x).take(1) {
                 for px in px_col {
-                    px.swap(avg, Relaxed);
+                    px.store(avg, Relaxed);
                 }
             }
         }
