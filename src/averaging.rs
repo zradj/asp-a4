@@ -1,42 +1,53 @@
-use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
-enum Channel {
-    Red,
-    Green,
-    Blue,
-}
+use std::sync::{
+    Arc,
+    atomic::{AtomicU32, Ordering::Relaxed},
+};
 
-fn compute_channel_avg<const S: usize>(pixels: &[[AtomicU32; S]; S], channel: Channel) -> u8 {
-    let offset: usize = match channel {
-        Channel::Red => 16,
-        Channel::Green => 8,
-        Channel::Blue => 0,
-    };
+pub(crate) fn worker(pixels: Arc<Vec<AtomicU32>>, square_size: usize, width: u32, height: u32) {
+    let max_done_x = (width as usize).div_ceil(square_size);
+    let max_done_y = (height as usize).div_ceil(square_size);
+    let mut done_x = 0;
+    let mut done_y = 0;
+    let num_pixels = (square_size as u64).pow(2);
 
-    let sum: u64 = pixels
-        .iter()
-        .map(|row| {
-            row.iter()
-                .map(|p| ((p.load(Relaxed) >> offset) & 0x0000FF) as u64)
-                .sum::<u64>()
-        })
-        .sum();
-    let num_pixels = (S as u64).pow(2);
+    while done_y < max_done_y {
+        let (mut sum_r, mut sum_g, mut sum_b): (u64, u64, u64) = (0, 0, 0);
 
-    (sum / num_pixels) as u8
-}
+        for px_row in pixels
+            .chunks(width as usize)
+            .skip(done_y * square_size)
+            .take(square_size)
+        {
+            for px_col in px_row.chunks(square_size).skip(done_x).take(1) {
+                for px in px_col {
+                    let px = px.load(Relaxed) as u64;
+                    sum_r += (px >> 16) & 0x0000FF;
+                    sum_g += (px >> 8) & 0x0000FF;
+                    sum_b += px & 0x0000FF;
+                }
+            }
+        }
 
-pub(crate) fn transform<const S: usize>(mut pixels: [[AtomicU32; S]; S]) {
-    let (avg_r, avg_g, avg_b) = (
-        compute_channel_avg(&pixels, Channel::Red),
-        compute_channel_avg(&pixels, Channel::Green),
-        compute_channel_avg(&pixels, Channel::Blue),
-    );
+        let (avg_r, avg_g, avg_b) = (sum_r / num_pixels, sum_g / num_pixels, sum_b / num_pixels);
+        let avg = (avg_r as u32) << 16 | (avg_g as u32) << 8 | (avg_b as u32);
 
-    let avg = (avg_r as u32) << 16 | (avg_g as u32) << 8 | (avg_b as u32);
+        for px_row in pixels
+            .chunks(width as usize)
+            .skip(done_y * square_size)
+            .take(square_size)
+        {
+            for px_col in px_row.chunks(square_size).skip(done_x).take(1) {
+                for px in px_col {
+                    px.swap(avg, Relaxed);
+                }
+            }
+        }
 
-    for row in &mut pixels {
-        for p in row {
-            p.swap(avg, Relaxed);
+        if done_x < max_done_x {
+            done_x += 1;
+        } else {
+            done_x = 0;
+            done_y += 1;
         }
     }
 }
