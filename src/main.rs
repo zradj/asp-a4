@@ -7,7 +7,7 @@ use std::{
     fmt::Display,
     fs::File,
     io::{self, BufReader},
-    num::NonZeroU32,
+    num::NonZeroUsize,
     process,
     sync::{Arc, atomic::AtomicU32},
 };
@@ -30,7 +30,7 @@ enum ProcessingMode {
 
 struct Settings {
     file_name: String,
-    square_size: NonZeroU32,
+    square_size: NonZeroUsize,
     mode: ProcessingMode,
 }
 
@@ -114,5 +114,10 @@ fn main() {
         .collect();
     let pixels = Arc::new(pixels);
 
-    visualize(rgb.width(), rgb.height(), pixels);
+    visualize(
+        rgb.width(),
+        rgb.height(),
+        pixels,
+        settings.square_size.get(),
+    );
 }

@@ -3,7 +3,17 @@ use std::sync::{
     atomic::{AtomicU32, Ordering::Relaxed},
 };
 
-pub(crate) fn worker(pixels: Arc<Vec<AtomicU32>>, square_size: usize, width: u32, height: u32) {
+use winit::event_loop::EventLoopProxy;
+
+use crate::visualization;
+
+pub(crate) fn worker(
+    pixels: Arc<Vec<AtomicU32>>,
+    square_size: usize,
+    width: u32,
+    height: u32,
+    proxy: EventLoopProxy<visualization::Event>,
+) {
     let max_done_x = (width as usize).div_ceil(square_size);
     let max_done_y = (height as usize).div_ceil(square_size);
     let mut done_x = 0;
@@ -48,6 +58,13 @@ pub(crate) fn worker(pixels: Arc<Vec<AtomicU32>>, square_size: usize, width: u32
         } else {
             done_x = 0;
             done_y += 1;
+        }
+
+        if proxy
+            .send_event(visualization::Event::IterationDone)
+            .is_err()
+        {
+            return;
         }
     }
 }
