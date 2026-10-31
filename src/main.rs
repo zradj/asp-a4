@@ -1,4 +1,5 @@
 mod averaging;
+mod single;
 mod visualization;
 
 use std::{
@@ -8,6 +9,7 @@ use std::{
     io::{self, BufReader},
     num::NonZeroU32,
     process,
+    sync::{Arc, atomic::AtomicU32},
 };
 
 use image::{ImageFormat, ImageReader};
@@ -106,10 +108,11 @@ fn main() {
     };
 
     let rgb = img.to_rgb8();
-    let pixels: Vec<u32> = rgb
+    let pixels: Vec<AtomicU32> = rgb
         .pixels()
-        .map(|p| (p[0] as u32) << 16 | (p[1] as u32) << 8 | p[2] as u32)
+        .map(|p| AtomicU32::new((p[0] as u32) << 16 | (p[1] as u32) << 8 | p[2] as u32))
         .collect();
+    let pixels = Arc::new(pixels);
 
     visualize(rgb.width(), rgb.height(), pixels);
 }

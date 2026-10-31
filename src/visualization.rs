@@ -1,4 +1,11 @@
-use std::{num::NonZeroU32, rc::Rc};
+use std::{
+    num::NonZeroU32,
+    rc::Rc,
+    sync::{
+        Arc,
+        atomic::{AtomicU32, Ordering::Relaxed},
+    },
+};
 
 use softbuffer::{Context, Surface};
 use winit::{
@@ -13,7 +20,7 @@ struct App {
     context: Context<OwnedDisplayHandle>,
     window: Option<Rc<Window>>,
     surface: Option<Surface<OwnedDisplayHandle, Rc<Window>>>,
-    image: Vec<u32>,
+    image: Arc<Vec<AtomicU32>>,
     width: u32,
     height: u32,
 }
@@ -67,7 +74,8 @@ impl ApplicationHandler for App {
                 let (bw, bh) = (width.get(), height.get());
                 for y in 0..self.height.min(bh) {
                     for x in 0..self.width.min(bw) {
-                        buffer[(y * bw + x) as usize] = self.image[(y * self.width + x) as usize];
+                        buffer[(y * bw + x) as usize] =
+                            self.image[(y * self.width + x) as usize].load(Relaxed);
                     }
                 }
                 buffer.present().expect("Failed to update the window");
@@ -77,7 +85,7 @@ impl ApplicationHandler for App {
     }
 }
 
-pub(crate) fn visualize(width: u32, height: u32, image: Vec<u32>) {
+pub(crate) fn visualize(width: u32, height: u32, image: Arc<Vec<AtomicU32>>) {
     let event_loop = EventLoop::new().unwrap();
     event_loop.set_control_flow(ControlFlow::Wait);
 
