@@ -1,3 +1,4 @@
+mod averaging;
 mod visualization;
 
 use std::{
@@ -72,8 +73,8 @@ fn main() {
                 "Error: Permission denied for the file \"{}\"",
                 settings.file_name
             )),
-            _ => fail(format!(
-                "Error: Unknown error when trying to open \"{}\"",
+            k => fail(format!(
+                "Error: Unknown error when trying to open \"{}\": {k:?}",
                 settings.file_name
             )),
         },
