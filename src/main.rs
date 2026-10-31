@@ -10,6 +10,7 @@ use std::{
 };
 
 use image::{ImageFormat, ImageReader};
+use rdev::display_size;
 
 use crate::visualization::visualize;
 
@@ -61,7 +62,7 @@ impl From<Args> for Settings {
 }
 
 fn main() {
-    let settings: Settings = env::args().into();
+    let settings = Settings::from(env::args());
 
     let file = match File::open(&settings.file_name) {
         Ok(f) => f,
@@ -85,7 +86,24 @@ fn main() {
         fail("Error: The provided image must be in the JPEG format");
     }
 
-    let img = img.decode().unwrap();
+    let img = img.decode().expect("Error: Failed to decode the image");
+    let img = match display_size() {
+        Ok((w, h)) => {
+            let (w, h) = (w as u32, h as u32);
+            if img.width() > w || img.height() > h {
+                img.resize(w, h, image::imageops::FilterType::CatmullRom)
+            } else {
+                img
+            }
+        }
+        Err(e) => {
+            eprintln!(
+                "Warning: Could not obtain the display size ({e:?}) - the image will not be downsized",
+            );
+            img
+        }
+    };
+
     let rgb = img.to_rgb8();
     let pixels: Vec<u32> = rgb
         .pixels()
