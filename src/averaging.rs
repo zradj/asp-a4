@@ -19,6 +19,8 @@ pub(crate) fn worker(
     let mut done_x = 0;
     let mut done_y = 0;
     let num_pixels = (square_size as u64).pow(2);
+    let sleep_duration =
+        std::time::Duration::from_nanos(10000000000 / ((max_done_x as u64) * (max_done_y as u64)));
 
     while done_y < max_done_y {
         let (mut sum_r, mut sum_g, mut sum_b): (u64, u64, u64) = (0, 0, 0);
@@ -53,7 +55,7 @@ pub(crate) fn worker(
             }
         }
 
-        if done_x < max_done_x {
+        if done_x + 1 < max_done_x {
             done_x += 1;
         } else {
             done_x = 0;
@@ -66,5 +68,7 @@ pub(crate) fn worker(
         {
             return;
         }
+
+        std::thread::sleep(sleep_duration);
     }
 }
