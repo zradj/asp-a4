@@ -16,23 +16,21 @@ pub(crate) fn spawn_workers(pic: Arc<Picture>, square_size: usize, proxy: EventL
     std::thread::spawn(move || {
         std::thread::scope(|s| {
             let total_rows = (pic.height as usize).div_ceil(square_size);
-            let rows_per_thread = total_rows.div_ceil(num_cores);
-            let mut remaining_rows = total_rows;
-            for (i, core_id) in core_ids.into_iter().enumerate() {
+            let num_threads = total_rows.min(num_cores);
+            let (base, extra) = (total_rows / num_threads, total_rows % num_threads);
+
+            let mut offset = 0;
+            for (i, core_id) in core_ids.into_iter().take(num_threads).enumerate() {
                 let pic = pic.clone();
                 let proxy = proxy.clone();
-                let assigned_rows = rows_per_thread.min(remaining_rows);
-                remaining_rows -= assigned_rows;
+                // add 1 to the assigned rows until the remainder is fully used
+                let assigned_rows = base + usize::from(i < extra);
+                let start = offset;
+                offset += assigned_rows;
                 s.spawn(move || {
                     let res = core_affinity::set_for_current(core_id);
                     if res {
-                        averaging::worker(
-                            pic,
-                            square_size,
-                            proxy,
-                            i * rows_per_thread,
-                            assigned_rows,
-                        );
+                        averaging::worker(pic, square_size, proxy, start, assigned_rows);
                     }
                 });
             }
