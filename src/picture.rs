@@ -1,6 +1,4 @@
-use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
-
-use image::{DynamicImage, RgbImage};
+use std::sync::atomic::AtomicU32;
 
 pub(crate) struct Picture {
     pub(crate) pixels: Vec<AtomicU32>,
