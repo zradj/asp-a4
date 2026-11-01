@@ -77,8 +77,8 @@ fn main() {
                 "Error: Permission denied for the file \"{}\"",
                 settings.file_name
             )),
-            k => fail(format!(
-                "Error: Unknown error when trying to open \"{}\": {k:?}",
+            _ => fail(format!(
+                "Error: Unknown error when trying to open \"{}\": {e:?}",
                 settings.file_name
             )),
         },
