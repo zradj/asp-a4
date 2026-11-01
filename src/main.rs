@@ -91,7 +91,9 @@ fn main() {
         fail("Error: The provided image must be in the JPEG format");
     }
 
-    let img = img.decode().expect("Error: Failed to decode the image");
+    let img = img
+        .decode()
+        .unwrap_or_else(|e| fail(format!("Error: Failed to decode the image ({e:?})")));
 
     let (window_w, window_h) = match display_size() {
         Ok((w, h)) => {

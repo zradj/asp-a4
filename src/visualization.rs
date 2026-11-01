@@ -10,7 +10,7 @@ use image::RgbImage;
 use softbuffer::{Context, Surface};
 use winit::{
     application::ApplicationHandler,
-    dpi::PhysicalSize,
+    dpi::{PhysicalPosition, PhysicalSize},
     event::WindowEvent,
     event_loop::{ControlFlow, EventLoop, EventLoopProxy, OwnedDisplayHandle},
     window::Window,
@@ -38,7 +38,8 @@ impl ApplicationHandler<Event> for App {
         let mut window_attrs = Window::default_attributes()
             .with_title("Image")
             .with_inner_size(PhysicalSize::new(self.window_w, self.window_h))
-            .with_decorations(false);
+            .with_decorations(false)
+            .with_position(PhysicalPosition::new(self.window_w / 2, self.window_h / 2));
         window_attrs.resizable = false;
         let window = self
             .window
