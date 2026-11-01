@@ -1,4 +1,6 @@
 use std::{
+    fs::File,
+    io::BufWriter,
     num::NonZeroU32,
     rc::Rc,
     sync::{
@@ -7,6 +9,7 @@ use std::{
     },
 };
 
+use image::RgbImage;
 use softbuffer::{Context, Surface};
 use winit::{
     application::ApplicationHandler,
@@ -21,6 +24,7 @@ use crate::averaging;
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Event {
     IterationDone,
+    AllDone,
 }
 
 struct App {
@@ -35,6 +39,7 @@ struct App {
 impl ApplicationHandler<Event> for App {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         let mut window_attrs = Window::default_attributes()
+            .with_title("Image")
             .with_inner_size(PhysicalSize::new(self.width, self.height))
             .with_decorations(false);
         window_attrs.resizable = false;
@@ -91,12 +96,28 @@ impl ApplicationHandler<Event> for App {
         }
     }
 
-    fn user_event(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop, event: Event) {
+    fn user_event(&mut self, event_loop: &winit::event_loop::ActiveEventLoop, event: Event) {
         match event {
             Event::IterationDone => {
                 if let Some(window) = &self.window {
                     window.request_redraw();
                 }
+            }
+            Event::AllDone => {
+                let rgb: Vec<u8> = self
+                    .image
+                    .iter()
+                    .flat_map(|p| {
+                        let p = p.load(Relaxed);
+                        [(p >> 16) as u8, (p >> 8) as u8, p as u8]
+                    })
+                    .collect();
+                let img = RgbImage::from_raw(self.width, self.height, rgb).unwrap();
+                let output_file =
+                    File::create("result.jpg").expect("Could not create or truncate result.jpg");
+                img.write_to(&mut BufWriter::new(output_file), image::ImageFormat::Jpeg)
+                    .expect("Could not write to result.jpg");
+                event_loop.exit();
             }
         }
     }
@@ -108,7 +129,13 @@ pub(crate) fn visualize(width: u32, height: u32, image: Arc<Vec<AtomicU32>>, squ
     let proxy = event_loop.create_proxy();
     let worker_image = image.clone();
 
-    std::thread::spawn(move || averaging::worker(worker_image, square_size, width, height, proxy));
+    std::thread::spawn(move || {
+        std::thread::scope(|s| {
+            let p = proxy.clone();
+            s.spawn(move || averaging::worker(worker_image, square_size, width, height, p));
+        });
+        let _ = proxy.send_event(Event::AllDone);
+    });
 
     let context = softbuffer::Context::new(event_loop.owned_display_handle()).unwrap();
     let mut app = App {
