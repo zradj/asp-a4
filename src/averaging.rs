@@ -1,21 +1,16 @@
-use std::sync::{
-    Arc,
-    atomic::{AtomicU32, Ordering::Relaxed},
-};
+use std::sync::{Arc, atomic::Ordering::Relaxed};
 
 use winit::event_loop::EventLoopProxy;
 
-use crate::visualization;
+use crate::{picture::Picture, visualization};
 
 pub(crate) fn worker(
-    pixels: Arc<Vec<AtomicU32>>,
+    picture: Arc<Picture>,
     square_size: usize,
-    width: u32,
-    height: u32,
     proxy: EventLoopProxy<visualization::Event>,
 ) {
-    let max_done_x = (width as usize).div_ceil(square_size);
-    let max_done_y = (height as usize).div_ceil(square_size);
+    let max_done_x = (picture.width as usize).div_ceil(square_size);
+    let max_done_y = (picture.height as usize).div_ceil(square_size);
     let mut done_x = 0;
     let mut done_y = 0;
     // work for 10 seconds regardless of the square size
@@ -26,8 +21,9 @@ pub(crate) fn worker(
         let (mut sum_r, mut sum_g, mut sum_b): (u64, u64, u64) = (0, 0, 0);
         let mut px_cnt: u64 = 0;
 
-        for px_row in pixels
-            .chunks(width as usize)
+        for px_row in picture
+            .pixels
+            .chunks(picture.width as usize)
             .skip(done_y * square_size)
             .take(square_size)
         {
@@ -45,8 +41,9 @@ pub(crate) fn worker(
         let (avg_r, avg_g, avg_b) = (sum_r / px_cnt, sum_g / px_cnt, sum_b / px_cnt);
         let avg = (avg_r as u32) << 16 | (avg_g as u32) << 8 | (avg_b as u32);
 
-        for px_row in pixels
-            .chunks(width as usize)
+        for px_row in picture
+            .pixels
+            .chunks(picture.width as usize)
             .skip(done_y * square_size)
             .take(square_size)
         {

@@ -1,4 +1,5 @@
 mod averaging;
+mod picture;
 mod single;
 mod visualization;
 
@@ -15,7 +16,7 @@ use std::{
 use image::{ImageFormat, ImageReader};
 use rdev::display_size;
 
-use crate::visualization::visualize;
+use crate::{picture::Picture, visualization::visualize};
 
 fn fail(msg: impl Display) -> ! {
     eprintln!("{msg}");
@@ -112,12 +113,8 @@ fn main() {
         .pixels()
         .map(|p| AtomicU32::new((p[0] as u32) << 16 | (p[1] as u32) << 8 | p[2] as u32))
         .collect();
-    let pixels = Arc::new(pixels);
 
-    visualize(
-        rgb.width(),
-        rgb.height(),
-        pixels,
-        settings.square_size.get(),
-    );
+    let picture = Arc::new(Picture::new(pixels, rgb.width(), rgb.height()));
+
+    visualize(picture, settings.square_size.get());
 }
