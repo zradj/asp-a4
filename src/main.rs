@@ -91,20 +91,22 @@ fn main() {
     }
 
     let img = img.decode().expect("Error: Failed to decode the image");
-    let img = match display_size() {
+
+    let (window_w, window_h) = match display_size() {
         Ok((w, h)) => {
-            let (w, h) = (w as u32, h as u32);
-            if img.width() > w || img.height() > h {
-                img.resize(w, h, image::imageops::FilterType::CatmullRom)
-            } else {
-                img
-            }
+            let scale = (w as f64 / img.width() as f64)
+                .min(h as f64 / img.height() as f64)
+                .min(1.0);
+            (
+                ((img.width() as f64 * scale) as u32).max(1),
+                ((img.height() as f64 * scale) as u32).max(1),
+            )
         }
         Err(e) => {
             eprintln!(
                 "Warning: Could not obtain the display size ({e:?}) - the image will not be downsized",
             );
-            img
+            (img.width(), img.height())
         }
     };
 
@@ -116,5 +118,5 @@ fn main() {
 
     let picture = Arc::new(Picture::new(pixels, rgb.width(), rgb.height()));
 
-    visualize(picture, settings.square_size.get());
+    visualize(picture, settings.square_size.get(), window_w, window_h);
 }

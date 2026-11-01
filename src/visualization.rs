@@ -29,13 +29,15 @@ struct App {
     window: Option<Rc<Window>>,
     surface: Option<Surface<OwnedDisplayHandle, Rc<Window>>>,
     picture: Arc<Picture>,
+    window_w: u32,
+    window_h: u32,
 }
 
 impl ApplicationHandler<Event> for App {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         let mut window_attrs = Window::default_attributes()
             .with_title("Image")
-            .with_inner_size(PhysicalSize::new(self.picture.width, self.picture.height))
+            .with_inner_size(PhysicalSize::new(self.window_w, self.window_h))
             .with_decorations(false);
         window_attrs.resizable = false;
         let window = self
@@ -72,18 +74,19 @@ impl ApplicationHandler<Event> for App {
                 else {
                     return;
                 };
+                let (bw, bh) = (width.get(), height.get());
                 surface
                     .resize(width, height)
                     .expect("Failed to resize the window");
 
                 let mut buffer = surface.buffer_mut().unwrap();
-                buffer.fill(0);
-                let (bw, bh) = (width.get(), height.get());
-                for y in 0..self.picture.height.min(bh) {
-                    for x in 0..self.picture.width.min(bw) {
-                        buffer[(y * bw + x) as usize] = self.picture.pixels
-                            [(y * self.picture.width + x) as usize]
-                            .load(Relaxed);
+                let (pw, ph) = (self.picture.width as u64, self.picture.height as u64);
+                for y in 0..bh as u64 {
+                    let sy = y * ph / bh as u64;
+                    let row = &self.picture.pixels[(sy * pw) as usize..][..pw as usize];
+                    for x in 0..bw as u64 {
+                        let sx = x * pw / bw as u64;
+                        buffer[(y * bw as u64 + x) as usize] = row[sx as usize].load(Relaxed);
                     }
                 }
                 buffer.present().expect("Failed to update the window");
@@ -120,7 +123,7 @@ impl ApplicationHandler<Event> for App {
     }
 }
 
-pub(crate) fn visualize(picture: Arc<Picture>, square_size: usize) {
+pub(crate) fn visualize(picture: Arc<Picture>, square_size: usize, window_w: u32, window_h: u32) {
     let event_loop = EventLoop::with_user_event().build().unwrap();
     event_loop.set_control_flow(ControlFlow::Wait);
     let proxy = event_loop.create_proxy();
@@ -140,6 +143,8 @@ pub(crate) fn visualize(picture: Arc<Picture>, square_size: usize) {
         window: None,
         surface: None,
         picture,
+        window_w,
+        window_h,
     };
 
     event_loop.run_app(&mut app).unwrap();
