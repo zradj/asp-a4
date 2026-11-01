@@ -118,5 +118,11 @@ fn main() {
 
     let picture = Arc::new(Picture::new(pixels, rgb.width(), rgb.height()));
 
-    visualize(picture, settings.square_size.get(), window_w, window_h);
+    visualize(
+        picture,
+        settings.square_size.get(),
+        window_w,
+        window_h,
+        single::spawn_worker,
+    );
 }

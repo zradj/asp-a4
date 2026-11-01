@@ -12,7 +12,7 @@ use winit::{
     application::ApplicationHandler,
     dpi::PhysicalSize,
     event::WindowEvent,
-    event_loop::{ControlFlow, EventLoop, OwnedDisplayHandle},
+    event_loop::{ControlFlow, EventLoop, EventLoopProxy, OwnedDisplayHandle},
     window::Window,
 };
 
@@ -123,19 +123,20 @@ impl ApplicationHandler<Event> for App {
     }
 }
 
-pub(crate) fn visualize(picture: Arc<Picture>, square_size: usize, window_w: u32, window_h: u32) {
+pub(crate) fn visualize<F>(
+    picture: Arc<Picture>,
+    square_size: usize,
+    window_w: u32,
+    window_h: u32,
+    spawn_workers: F,
+) where
+    F: FnOnce(Arc<Picture>, usize, EventLoopProxy<Event>),
+{
     let event_loop = EventLoop::with_user_event().build().unwrap();
     event_loop.set_control_flow(ControlFlow::Wait);
     let proxy = event_loop.create_proxy();
-    let worker_pic = picture.clone();
 
-    std::thread::spawn(move || {
-        std::thread::scope(|s| {
-            let p = proxy.clone();
-            s.spawn(move || averaging::worker(worker_pic, square_size, p));
-        });
-        let _ = proxy.send_event(Event::AllDone);
-    });
+    spawn_workers(picture.clone(), square_size, proxy.clone());
 
     let context = softbuffer::Context::new(event_loop.owned_display_handle()).unwrap();
     let mut app = App {

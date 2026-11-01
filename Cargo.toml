@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+core_affinity = "0.8.3"
 image = "0.25.10"
 rdev = "0.5.3"
 softbuffer = "0.4.8"
