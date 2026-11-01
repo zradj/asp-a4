@@ -100,10 +100,16 @@ fn main() {
             let scale = (w as f64 / img.width() as f64)
                 .min(h as f64 / img.height() as f64)
                 .min(1.0);
-            (
+            let (w, h) = (
                 ((img.width() as f64 * scale) as u32).max(1),
                 ((img.height() as f64 * scale) as u32).max(1),
-            )
+            );
+            println!(
+                "Info: The image was downsized from {}x{} to {w}x{h} since it did not fit in the display",
+                img.width(),
+                img.height()
+            );
+            (w, h)
         }
         Err(e) => {
             eprintln!(

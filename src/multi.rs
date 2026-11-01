@@ -11,6 +11,7 @@ pub(crate) fn spawn_workers(pic: Arc<Picture>, square_size: usize, proxy: EventL
         return;
     };
     let num_cores = core_ids.len();
+    println!("Info: There are {num_cores} cores present");
 
     std::thread::spawn(move || {
         std::thread::scope(|s| {
