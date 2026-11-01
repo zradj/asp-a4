@@ -16,7 +16,7 @@ use winit::{
     window::Window,
 };
 
-use crate::{averaging, picture::Picture};
+use crate::picture::Picture;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Event {

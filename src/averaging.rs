@@ -8,14 +8,17 @@ pub(crate) fn worker(
     picture: Arc<Picture>,
     square_size: usize,
     proxy: EventLoopProxy<visualization::Event>,
+    offset_y: usize,
+    assigned_rows: usize,
 ) {
     let max_done_x = (picture.width as usize).div_ceil(square_size);
-    let max_done_y = (picture.height as usize).div_ceil(square_size);
+    let max_done_y = offset_y + assigned_rows;
     let mut done_x = 0;
-    let mut done_y = 0;
+    let mut done_y = offset_y;
     // work for 10 seconds regardless of the square size
-    let sleep_duration =
-        std::time::Duration::from_nanos(10000000000 / ((max_done_x as u64) * (max_done_y as u64)));
+    let sleep_duration = std::time::Duration::from_nanos(
+        10000000000 / ((max_done_x as u64) * (assigned_rows as u64)),
+    );
 
     while done_y < max_done_y {
         let (mut sum_r, mut sum_g, mut sum_b): (u64, u64, u64) = (0, 0, 0);

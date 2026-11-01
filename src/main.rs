@@ -1,4 +1,5 @@
 mod averaging;
+mod multi;
 mod picture;
 mod single;
 mod visualization;
@@ -118,11 +119,16 @@ fn main() {
 
     let picture = Arc::new(Picture::new(pixels, rgb.width(), rgb.height()));
 
+    let spawn_workers = match &settings.mode {
+        ProcessingMode::Single => single::spawn_worker,
+        ProcessingMode::Multi => multi::spawn_workers,
+    };
+
     visualize(
         picture,
         settings.square_size.get(),
         window_w,
         window_h,
-        single::spawn_worker,
+        spawn_workers,
     );
 }
