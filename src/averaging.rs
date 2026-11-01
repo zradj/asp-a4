@@ -4,6 +4,9 @@ use winit::event_loop::EventLoopProxy;
 
 use crate::{picture::Picture, visualization};
 
+// always work for this number of milliseconds (currently 5000 ms = 5 s)
+const WORK_DURATION_MILLIS: u64 = 5000;
+
 pub(crate) fn worker(
     picture: Arc<Picture>,
     square_size: usize,
@@ -15,9 +18,8 @@ pub(crate) fn worker(
     let max_done_y = offset_y + num_assigned_rows;
     let mut done_x = 0;
     let mut done_y = offset_y;
-    // work for 10 seconds regardless of the square size
     let sleep_duration = std::time::Duration::from_nanos(
-        10000000000 / ((max_done_x as u64) * (num_assigned_rows as u64)),
+        WORK_DURATION_MILLIS * 1000000 / ((max_done_x as u64) * (num_assigned_rows as u64)),
     );
 
     while done_y < max_done_y {
