@@ -7,6 +7,7 @@ use std::{
 };
 
 use image::RgbImage;
+use rdev::display_size;
 use softbuffer::{Context, Surface};
 use winit::{
     application::ApplicationHandler,
@@ -41,6 +42,12 @@ impl ApplicationHandler<Event> for App {
             .with_decorations(false)
             .with_position(PhysicalPosition::new(self.window_w / 2, self.window_h / 2));
         window_attrs.resizable = false;
+        if let Ok((w, h)) = display_size() {
+            let x = (w.saturating_sub(self.window_w as u64)) / 2;
+            let y = (h.saturating_sub(self.window_h as u64)) / 2;
+
+            window_attrs = window_attrs.with_position(PhysicalPosition::new(x as i32, y as i32));
+        }
         let window = self
             .window
             .get_or_insert_with(|| {
