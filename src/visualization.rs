@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::BufWriter,
+    io::{self, BufWriter, Write},
     num::NonZeroU32,
     rc::Rc,
     sync::{Arc, atomic::Ordering::Relaxed},
@@ -17,7 +17,7 @@ use winit::{
     window::Window,
 };
 
-use crate::picture::Picture;
+use crate::{fail, picture::Picture};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Event {
@@ -111,6 +111,9 @@ impl ApplicationHandler<Event> for App {
                 }
             }
             Event::AllDone => {
+                println!("Info: Pixelization done");
+                print!("Info: Writing to result.jpg... ");
+                let _ = io::stdout().flush();
                 let rgb: Vec<u8> = self
                     .picture
                     .pixels
@@ -121,10 +124,26 @@ impl ApplicationHandler<Event> for App {
                     })
                     .collect();
                 let img = RgbImage::from_raw(self.picture.width, self.picture.height, rgb).unwrap();
-                let output_file =
-                    File::create("result.jpg").expect("Could not create or truncate result.jpg");
+                let output_file = match File::create("result.jpg") {
+                    Ok(f) => f,
+                    Err(e) => {
+                        println!("failed");
+                        match e.kind() {
+                            io::ErrorKind::PermissionDenied => {
+                                fail("Error: Permission denied for \"result.jpg\"".to_string())
+                            }
+                            _ => fail(format!(
+                                "Error: Unknown error when trying to open \"result.jpg\": {e:?}",
+                            )),
+                        }
+                    }
+                };
                 img.write_to(&mut BufWriter::new(output_file), image::ImageFormat::Jpeg)
-                    .expect("Could not write to result.jpg");
+                    .unwrap_or_else(|e| {
+                        println!("failed");
+                        fail(format!("Error: Could not write to result.jpg ({e:?})"))
+                    });
+                println!("success");
                 event_loop.exit();
             }
         }

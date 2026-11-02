@@ -8,7 +8,7 @@ use std::{
     env::{self, Args},
     fmt::Display,
     fs::File,
-    io::{self, BufReader},
+    io::{self, BufReader, Write},
     num::NonZeroUsize,
     process,
     sync::{Arc, atomic::AtomicU32},
@@ -69,31 +69,45 @@ impl From<Args> for Settings {
 fn main() {
     let settings = Settings::from(env::args());
 
+    print!("Info: Reading the file... ");
+    let _ = io::stdout().flush();
+
     let file = match File::open(&settings.file_name) {
         Ok(f) => f,
-        Err(e) => match e.kind() {
-            io::ErrorKind::NotFound => fail(format!("Error: \"{}\" not found", settings.file_name)),
-            io::ErrorKind::PermissionDenied => fail(format!(
-                "Error: Permission denied for the file \"{}\"",
-                settings.file_name
-            )),
-            _ => fail(format!(
-                "Error: Unknown error when trying to open \"{}\": {e:?}",
-                settings.file_name
-            )),
-        },
+        Err(e) => {
+            println!("failed");
+            match e.kind() {
+                io::ErrorKind::NotFound => {
+                    fail(format!("Error: \"{}\" not found", settings.file_name))
+                }
+                io::ErrorKind::PermissionDenied => fail(format!(
+                    "Error: Permission denied for the file \"{}\"",
+                    settings.file_name
+                )),
+                _ => fail(format!(
+                    "Error: Unknown error when trying to open \"{}\": {e:?}",
+                    settings.file_name
+                )),
+            }
+        }
     };
+
+    println!("success");
+    print!("Info: Decoding the image... ");
+    let _ = io::stdout().flush();
 
     let img = ImageReader::new(BufReader::new(file))
         .with_guessed_format()
-        .unwrap_or_else(|_| fail("Error: Error while reading the image"));
+        .unwrap_or_else(|_| fail("failed\nError: Error while reading the image"));
     if !matches!(img.format(), Some(ImageFormat::Jpeg)) {
-        fail("Error: The provided image must be in the JPEG format");
+        fail("failed\nError: The provided image must be in the JPEG format");
     }
 
     let img = img
         .decode()
-        .unwrap_or_else(|e| fail(format!("Error: Failed to decode the image ({e:?})")));
+        .unwrap_or_else(|e| fail(format!("failed\nError: Failed to decode the image ({e:?})")));
+
+    println!("success");
 
     let (window_w, window_h) = match display_size() {
         Ok((w, h)) => {
@@ -106,7 +120,7 @@ fn main() {
             );
             if img.width() != w || img.height() != h {
                 println!(
-                    "Info: The image was downsized from {}x{} to {w}x{h} since it did not fit in the display",
+                    "Info: The image is too large to fit on the screen - downsized from {}x{} to {w}x{h}",
                     img.width(),
                     img.height()
                 );
@@ -115,7 +129,7 @@ fn main() {
         }
         Err(e) => {
             eprintln!(
-                "Warning: Could not obtain the display size ({e:?}) - the image will not be downsized",
+                "Warning: Could not obtain the display size ({e:?}) - the image will not be downsized if it does not fit",
             );
             (img.width(), img.height())
         }

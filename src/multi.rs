@@ -19,6 +19,12 @@ pub(crate) fn spawn_workers(pic: Arc<Picture>, square_size: usize, proxy: EventL
             let num_threads = total_rows.min(num_cores);
             let (base, extra) = (total_rows / num_threads, total_rows % num_threads);
 
+            if num_threads < num_cores {
+                println!(
+                    "Info: Only {num_threads} cores will be used - the square size is too large"
+                );
+            }
+
             let mut offset = 0;
             for (i, core_id) in core_ids.into_iter().take(num_threads).enumerate() {
                 let pic = pic.clone();
