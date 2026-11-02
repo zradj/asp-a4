@@ -51,11 +51,11 @@ impl ApplicationHandler<Event> for App {
         let window = self
             .window
             .get_or_insert_with(|| {
-                Rc::new(
-                    event_loop
-                        .create_window(window_attrs)
-                        .expect("Failed to create a window for the image"),
-                )
+                Rc::new(event_loop.create_window(window_attrs).unwrap_or_else(|e| {
+                    fail(format!(
+                        "Error: Failed to create a window for the image ({e:?})"
+                    ))
+                }))
             })
             .clone();
         if self.surface.is_none() {
@@ -83,9 +83,9 @@ impl ApplicationHandler<Event> for App {
                     return;
                 };
                 let (bw, bh) = (width.get(), height.get());
-                surface
-                    .resize(width, height)
-                    .expect("Failed to resize the window");
+                surface.resize(width, height).unwrap_or_else(|e| {
+                    fail(format!("Error: Failed to resize the window ({e:?})"))
+                });
 
                 let mut buffer = surface.buffer_mut().unwrap();
                 let (pw, ph) = (self.picture.width as u64, self.picture.height as u64);
@@ -97,7 +97,9 @@ impl ApplicationHandler<Event> for App {
                         buffer[(y * bw as u64 + x) as usize] = row[sx as usize].load(Relaxed);
                     }
                 }
-                buffer.present().expect("Failed to update the window");
+                buffer.present().unwrap_or_else(|e| {
+                    fail(format!("Error: Failed to update the window ({e:?})"))
+                });
             }
             _ => {}
         }
